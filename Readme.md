@@ -12,9 +12,10 @@ This is a Discord Bot written in JavaScript using [Discord.js](https://discord.j
 
 The bot has several prefix commands for different AI features.
 
-- `?` - AI Text
-- `!` - AI Text Open
-- `:` - AI Image
+- `!` - AI Text
+- `:art` - AI Image
+- `:remix` - AI Image Variation
+- `:resume` - AI PDF Resume Review
 
 Examples:
 
