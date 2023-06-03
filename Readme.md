@@ -2,11 +2,6 @@
 
 This is a Discord Bot written in JavaScript using [Discord.js](https://discord.js.org/) and [OpenAI](https://openai.com/).
 
-# Arti Bot
-
-Arti Bot is a discord bot built with the Discord.js library. It uses OpenAI's API to generate 
-AI-generated text and images in response to user prompts. 
-
 ## Requirements
 
 - Node.js
@@ -20,18 +15,10 @@ The bot has several prefix commands for different AI features.
 - `?` - AI Text
 - `!` - AI Text Open
 - `:` - AI Image
-- `-` - AI Blog Posts
-- `:tweet` - AI Image Tweet
-- `:image` - AI Image Variation
 
 Examples:
 
-- `? write a poem for @username`
-- `! write a short story`
-- `: generate an image of a flower`
-- `- create a blog post about recycling`
-- `:tweet create a tweet about the environment`
-- `:image upload an image of a landscape`
+
 
 ## Installation
 
