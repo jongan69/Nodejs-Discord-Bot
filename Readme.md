@@ -17,8 +17,24 @@ The bot has several prefix commands for different AI features.
 - `:remix` - AI Image Variation
 - `:resume` - AI PDF Resume Review
 
-Examples:
+This bot also has a few slash commands:
 
+## AI
+/drink - An AI drink recipe
+/turbo - use GPT-3.5-Turbo for responses
+
+## Fun
+/ping - Pong!
+
+## Utility
+/entropy - returns entropy from Real Random LLC API
+/server - returns server information
+/avatar - returns avatar image
+
+## Moderation
+/kick - Simulates a kick
+/prune - delete up to 99 messages in a channel
+/user - returns user information
 
 
 ## Installation
