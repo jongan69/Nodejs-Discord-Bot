@@ -21,6 +21,7 @@ This bot also has a few slash commands:
 
 ## AI
 /drink - An AI drink recipe
+
 /turbo - use GPT-3.5-Turbo for responses
 
 ## Fun
@@ -28,12 +29,16 @@ This bot also has a few slash commands:
 
 ## Utility
 /entropy - returns entropy from Real Random LLC API
+
 /server - returns server information
+
 /avatar - returns avatar image
 
 ## Moderation
 /kick - Simulates a kick
+
 /prune - delete up to 99 messages in a channel
+
 /user - returns user information
 
 
@@ -46,7 +51,7 @@ This bot also has a few slash commands:
 
 ## Configuration
 
-The bot can be configured by editing the prefix variable in index.js.
+The bot can be configured by editing the prefix variable in index.js, use `node deploy-commands.js` script to enable slash commands
 
 ## Contributing
 
