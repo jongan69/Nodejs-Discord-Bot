@@ -26,6 +26,7 @@ This bot also has a few slash commands:
 
 ## Fun
 /ping - Pong!
+/tweet - Tweet using discord
 
 ## Utility
 /entropy - returns entropy from Real Random LLC API
