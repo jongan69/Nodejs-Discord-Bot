@@ -1,46 +1,32 @@
 const { SlashCommandBuilder } = require('discord.js');
+const { TwitterApi } = require('twitter-api-v2');
 const fetch = require("node-fetch");
+
+const twitterUserConfig = {
+  appKey: process.env.TWITTER_API_KEY ?? '',
+  appSecret: process.env.TWITTER_API_SECRET ?? '',
+  accessToken: process.env.TWITTER_ACCESS_TOKEN,
+  accessSecret: process.env.TWITTER_ACCESS_SECRET,
+};
+
+const userClient = new TwitterApi(twitterUserConfig);
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('turbo')
-    .setDescription('Prompt GPT Turbo')
-  	.addStringOption(
-      option => 
-        option.setName('prompt')
-        .setDescription('Information for Turbo')
-        .setRequired(true)),
+    .setName('tweet')
+    .setDescription('Send a Tweet!')
+    .addStringOption(
+      option =>
+        option.setName('tweet')
+          .setDescription('Text to send to twitter')
+          .setRequired(true)),
   async execute(interaction) {
-    const url = 'https://api.openai.com/v1/chat/completions'
     await interaction.deferReply();
-    const prompt = interaction.options.getString('prompt');
-    if(prompt.length !== 0) {
-      let response = await fetch(url, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-          },
-          body: JSON.stringify({
-            model: "gpt-3.5-turbo",
-            messages: [
-              { role: "user", content: `${prompt}` }
-            ],
-            temperature: 0.7,
-            top_p: 1,
-            frequency_penalty: 0,
-            presence_penalty: 0,
-            max_tokens: 200,
-            stream: false,
-            n: 1,
-          }),
-    }).then((data) => data.json())
-      if(response){
-        console.log('prompt', response.choices[0].message)
-        return interaction.editReply(`GPT-Turbo: ${response.choices[0].message.content}`);
-      }
-    } else {
-       return interaction.editReply(`Prompt can not be empty`);
+    const tweet = interaction.options.getString('tweet');
+    const postTweet = await userClient.v1.tweet(tweet);
+    if (postTweet) {
+      console.log('Tweet', postTweet.full_text)
+      return await interaction.editReply(`Tweet Posted: ${JSON.stringify(postTweet.full_text)} at https://twitter.com/${postTweet.user.screen_name}`);
     }
   },
 };

@@ -12,13 +12,13 @@ const path = require('node:path');
 pdfjsLib.GlobalWorkerOptions.workerSrc = `pdfjs-dist/legacy/build/pdf.worker`;
 
 // Discord Client
-const client = new Client({ 
+const client = new Client({
   intents: [
-    GatewayIntentBits.Guilds, 
+    GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
-		GatewayIntentBits.MessageContent,
-		GatewayIntentBits.GuildMembers,
-  ] 
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMembers,
+  ]
 });
 
 // Test Command
@@ -64,32 +64,38 @@ const foldersPath = path.join(__dirname, 'commands');
 const commandFolders = fs.readdirSync(foldersPath);
 
 for (const folder of commandFolders) {
-	const commandsPath = path.join(foldersPath, folder);
-	const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
-	for (const file of commandFiles) {
-		const filePath = path.join(commandsPath, file);
-		const command = require(filePath);
-		if ('data' in command && 'execute' in command) {
-			client.commands.set(command.data.name, command);
-		} else {
-			console.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
-		}
-	}
+  const commandsPath = path.join(foldersPath, folder);
+  const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+  for (const file of commandFiles) {
+    const filePath = path.join(commandsPath, file);
+    const command = require(filePath);
+    if ('data' in command && 'execute' in command) {
+      client.commands.set(command.data.name, command);
+    } else {
+      console.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
+    }
+  }
 }
 
 // Events
-const eventsPath = path.join(__dirname, 'events');
-const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'));
+client.on(Events.InteractionCreate, async interaction => {
+  if (!interaction.isChatInputCommand()) return;
 
-for (const file of eventFiles) {
-	const filePath = path.join(eventsPath, file);
-	const event = require(filePath);
-	if (event.once) {
-		client.once(event.name, (...args) => event.execute(...args));
-	} else {
-		client.on(event.name, (...args) => event.execute(...args));
-	}
-}
+  const command = client.commands.get(interaction.commandName);
+
+  if (!command) return;
+
+  try {
+    await command.execute(interaction);
+  } catch (error) {
+    console.error(error);
+    if (interaction.replied || interaction.deferred) {
+      await interaction.followUp({ content: 'There was an error while executing this command!', ephemeral: true });
+    } else {
+      await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
+    }
+  }
+});
 
 // Welcome Message
 client.on('messageCreate', msg => {
@@ -193,8 +199,7 @@ client.on('messageCreate', async msg => {
 });
 
 function attachIsPDF(msgAttach) {
-    console.log(msgAttach.indexOf("pdf", msgAttach.length - "pdf".length /*or 3*/) !== -1)
-    return msgAttach.indexOf("pdf", msgAttach.length - "pdf".length /*or 3*/) !== -1;
+  return msgAttach.indexOf("pdf", msgAttach.length - "pdf".length /*or 3*/) !== -1;
 }
 
 // Resume Review Command
@@ -208,66 +213,66 @@ client.on('messageCreate', async msg => {
   let resume = file.attachment
   let resumetext;
   try {
-    if (attachIsPDF(resume)){
-          // Load the PDF document
-    var loadingTask = pdfjsLib.getDocument(resume);
+    if (attachIsPDF(resume)) {
+      // Load the PDF document
+      var loadingTask = pdfjsLib.getDocument(resume);
 
-    loadingTask.promise.then(function(pdf) {
-      console.log('PDF loaded', pdf.numPages);
-      var maxPages = pdf.numPages;
-      var countPromises = []; // collecting all page promises
+      loadingTask.promise.then(function(pdf) {
+        console.log('PDF loaded', pdf.numPages);
+        var maxPages = pdf.numPages;
+        var countPromises = []; // collecting all page promises
 
-      for (var j = 1; j <= maxPages; j++) {
-        var page = pdf.getPage(j);
-        var txt = "";
+        for (var j = 1; j <= maxPages; j++) {
+          var page = pdf.getPage(j);
+          var txt = "";
 
-        countPromises.push(page.then(function(page) { // add page promise
-          var textContent = page.getTextContent();
-          return textContent.then(function(text) { // return content promise
-            return text.items.map(function(s) { return s.str; }).join(''); // value page text 
-          });
-        }));
-      }
-
-      // Wait for all pages and join text
-      return Promise.all(countPromises).then(async function(texts) {
-        console.log(texts)
-        resumetext = texts
-        console.log('DEV TEXT', resumetext)
-        
-        const response = await fetch(url, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-          },
-          body: JSON.stringify({
-            model: "gpt-3.5-turbo",
-            messages: [
-              { role: "user", content: `Review and Critique this resume: ${resumetext}` }
-            ],
-            temperature: 0.7,
-            top_p: 1,
-            frequency_penalty: 0,
-            presence_penalty: 0,
-            max_tokens: 200,
-            stream: false,
-            n: 1,
-          }),
-        });
-
-        const json = await response.json();
-        let answers = json.choices;
-
-        if (answers) {
-          answers.forEach((item) => {
-            msg.channel.send(`RESUME REVIEW: ${item.message.content}`)
-          })
+          countPromises.push(page.then(function(page) { // add page promise
+            var textContent = page.getTextContent();
+            return textContent.then(function(text) { // return content promise
+              return text.items.map(function(s) { return s.str; }).join(''); // value page text 
+            });
+          }));
         }
+
+        // Wait for all pages and join text
+        return Promise.all(countPromises).then(async function(texts) {
+          console.log(texts)
+          resumetext = texts
+          console.log('DEV TEXT', resumetext)
+
+          const response = await fetch(url, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+            },
+            body: JSON.stringify({
+              model: "gpt-3.5-turbo",
+              messages: [
+                { role: "user", content: `Review and Critique this resume: ${resumetext}` }
+              ],
+              temperature: 0.7,
+              top_p: 1,
+              frequency_penalty: 0,
+              presence_penalty: 0,
+              max_tokens: 200,
+              stream: false,
+              n: 1,
+            }),
+          });
+
+          const json = await response.json();
+          let answers = json.choices;
+
+          if (answers) {
+            answers.forEach((item) => {
+              msg.channel.send(`RESUME REVIEW: ${item.message.content}`)
+            })
+          }
+        });
       });
-    });  
-    }  else{
-       msg.channel.send(`File must be PDF`)
+    } else {
+      msg.channel.send(`File must be PDF`)
     }
   } catch (err) {
     msg.channel.send(`${err}`)
