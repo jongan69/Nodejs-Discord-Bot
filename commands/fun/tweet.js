@@ -1,6 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
 const { TwitterApi } = require('twitter-api-v2');
-const fetch = require("node-fetch");
 
 const twitterUserConfig = {
   appKey: process.env.TWITTER_API_KEY ?? '',

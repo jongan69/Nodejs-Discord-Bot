@@ -1,5 +1,6 @@
 const keep_alive = require('./keep_alive.js');
 const { Client, Collection, Events, GatewayIntentBits } = require('discord.js');
+
 const { Configuration, OpenAIApi } = require("openai");
 const fetch = require("node-fetch");
 
@@ -206,7 +207,6 @@ function attachIsPDF(msgAttach) {
 client.on('messageCreate', async msg => {
   if (msg.author.bot) return;
   if (!msg.content.startsWith(resumeprefix)) return;
-  const commandBody = msg.content.slice(resumeprefix.length);
 
   let recievedResume = msg.attachments
   let file = recievedResume.first();
@@ -238,7 +238,6 @@ client.on('messageCreate', async msg => {
         return Promise.all(countPromises).then(async function(texts) {
           console.log(texts)
           resumetext = texts
-          console.log('DEV TEXT', resumetext)
 
           const response = await fetch(url, {
             method: "POST",
