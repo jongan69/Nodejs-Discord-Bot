@@ -16,7 +16,8 @@ The bot has several prefix commands for different AI features.
 - `:art` - AI Image
 - `:remix` - AI Image Variation
 - `:resume` - AI PDF Resume Review
-
+- `:research` - AI Google Search Message Research
+- 
 This bot also has a few slash commands:
 
 ## AI
