@@ -5,10 +5,12 @@ export type EventBus = import("./event_utils").EventBus;
 export type IDownloadManager = import("./interfaces").IDownloadManager;
 export type IL10n = import("./interfaces").IL10n;
 export type IPDFAnnotationLayerFactory = import("./interfaces").IPDFAnnotationLayerFactory;
+export type IPDFAnnotationEditorLayerFactory = import("./interfaces").IPDFAnnotationEditorLayerFactory;
 export type IPDFLinkService = import("./interfaces").IPDFLinkService;
 export type IPDFStructTreeLayerFactory = import("./interfaces").IPDFStructTreeLayerFactory;
 export type IPDFTextLayerFactory = import("./interfaces").IPDFTextLayerFactory;
 export type IPDFXfaLayerFactory = import("./interfaces").IPDFXfaLayerFactory;
+export type TextAccessibilityManager = import("./text_accessibility.js").TextAccessibilityManager;
 export type PDFViewerOptions = {
     /**
      * - The container for the viewer element.
@@ -66,6 +68,12 @@ export type PDFViewerOptions = {
      */
     annotationMode?: number | undefined;
     /**
+     * - Enables the creation and editing
+     * of new Annotations. The constants from {@link AnnotationEditorType } should
+     * be used. The default value is `AnnotationEditorType.DISABLE`.
+     */
+    annotationEditorMode?: number | undefined;
+    /**
      * - Path for image resources, mainly
      * mainly for annotation icons. Include trailing slash.
      */
@@ -75,10 +83,6 @@ export type PDFViewerOptions = {
      * landscape pages upon printing. The default is `false`.
      */
     enablePrintAutoRotate?: boolean | undefined;
-    /**
-     * - 'canvas' or 'svg'. The default is 'canvas'.
-     */
-    renderer: string;
     /**
      * - Enables CSS only zooming. The default
      * value is `false`.
@@ -99,16 +103,23 @@ export type PDFViewerOptions = {
      * when they exist. The default value is `false`.
      */
     enablePermissions?: boolean | undefined;
+    /**
+     * - Overwrites background and foreground colors
+     * with user defined ones in order to improve readability in high contrast
+     * mode.
+     */
+    pageColors?: Object | undefined;
 };
 /**
  * Simple viewer control to display PDF content/pages.
  *
  * @implements {IPDFAnnotationLayerFactory}
+ * @implements {IPDFAnnotationEditorLayerFactory}
  * @implements {IPDFStructTreeLayerFactory}
  * @implements {IPDFTextLayerFactory}
  * @implements {IPDFXfaLayerFactory}
  */
-export class BaseViewer implements IPDFAnnotationLayerFactory, IPDFStructTreeLayerFactory, IPDFTextLayerFactory, IPDFXfaLayerFactory {
+export class BaseViewer implements IPDFAnnotationLayerFactory, IPDFAnnotationEditorLayerFactory, IPDFStructTreeLayerFactory, IPDFTextLayerFactory, IPDFXfaLayerFactory {
     /**
      * @param {PDFViewerOptions} options
      */
@@ -124,13 +135,13 @@ export class BaseViewer implements IPDFAnnotationLayerFactory, IPDFStructTreeLay
     textLayerMode: number;
     imageResourcesPath: string;
     enablePrintAutoRotate: boolean;
-    renderer: string;
+    renderer: any;
     useOnlyCssZoom: boolean;
     maxCanvasPixels: number | undefined;
     l10n: import("./interfaces").IL10n;
+    pageColors: Object | null;
     defaultRenderingQueue: boolean;
     renderingQueue: PDFRenderingQueue | undefined;
-    _doc: HTMLElement;
     scroll: {
         right: boolean;
         down: boolean;
@@ -212,7 +223,7 @@ export class BaseViewer implements IPDFAnnotationLayerFactory, IPDFStructTreeLay
     setDocument(pdfDocument: PDFDocumentProxy): void;
     pdfDocument: import("../src/display/api").PDFDocumentProxy | undefined;
     _scrollMode: any;
-    _optionalContentConfigPromise: Promise<any> | null | undefined;
+    _optionalContentConfigPromise: Promise<any> | Promise<import("../src/display/optional_content_config.js").OptionalContentConfig> | null | undefined;
     /**
      * @param {Array|null} labels
      */
@@ -236,11 +247,6 @@ export class BaseViewer implements IPDFAnnotationLayerFactory, IPDFStructTreeLay
     _previousScrollMode: any;
     _spreadMode: any;
     _scrollUpdate(): void;
-    _scrollIntoView({ pageDiv, pageSpot, pageNumber }: {
-        pageDiv: any;
-        pageSpot?: null | undefined;
-        pageNumber?: null | undefined;
-    }): void;
     _setScaleUpdatePages(newScale: any, newValue: any, noScroll?: boolean, preset?: boolean): void;
     /**
      * @private
@@ -248,18 +254,13 @@ export class BaseViewer implements IPDFAnnotationLayerFactory, IPDFStructTreeLay
     private get _pageWidthScaleFactor();
     _setScale(value: any, noScroll?: boolean): void;
     /**
-     * Refreshes page view: scrolls to the current page and updates the scale.
-     * @private
-     */
-    private _resetCurrentPageView;
-    /**
      * @param {string} label - The page label.
      * @returns {number|null} The page number corresponding to the page label,
      *   or `null` when no page labels exist and/or the input is invalid.
      */
     pageLabelToPageNumber(label: string): number | null;
     /**
-     * @typedef ScrollPageIntoViewParameters
+     * @typedef {Object} ScrollPageIntoViewParameters
      * @property {number} pageNumber - The page number.
      * @property {Array} [destArray] - The original PDF destination array, in the
      *   format: <page-ref> </XYZ|/FitXXX> <args..>
@@ -302,37 +303,6 @@ export class BaseViewer implements IPDFAnnotationLayerFactory, IPDFStructTreeLay
     get isChangingPresentationMode(): boolean;
     get isHorizontalScrollbarEnabled(): boolean;
     get isVerticalScrollbarEnabled(): boolean;
-    /**
-     * Helper method for `this._getVisiblePages`. Should only ever be used when
-     * the viewer can only display a single page at a time, for example:
-     *  - When PresentationMode is active.
-     */
-    _getCurrentVisiblePage(): {
-        views: never[];
-        first?: undefined;
-        last?: undefined;
-        ids?: undefined;
-    } | {
-        first: {
-            id: any;
-            x: any;
-            y: any;
-            view: any;
-        };
-        last: {
-            id: any;
-            x: any;
-            y: any;
-            view: any;
-        };
-        views: {
-            id: any;
-            x: any;
-            y: any;
-            view: any;
-        }[];
-        ids: Set<any>;
-    };
     _getVisiblePages(): Object;
     /**
      * @param {number} pageNumber
@@ -349,54 +319,151 @@ export class BaseViewer implements IPDFAnnotationLayerFactory, IPDFStructTreeLay
     private _cancelRendering;
     forceRendering(currentlyVisiblePages: any): boolean;
     /**
-     * @param {HTMLDivElement} textLayerDiv
-     * @param {number} pageIndex
-     * @param {PageViewport} viewport
-     * @param {boolean} enhanceTextSelection
-     * @param {EventBus} eventBus
-     * @param {TextHighlighter} highlighter
+     * @typedef {Object} CreateTextLayerBuilderParameters
+     * @property {HTMLDivElement} textLayerDiv
+     * @property {number} pageIndex
+     * @property {PageViewport} viewport
+     * @property {boolean} [enhanceTextSelection]
+     * @property {EventBus} eventBus
+     * @property {TextHighlighter} highlighter
+     * @property {TextAccessibilityManager} [accessibilityManager]
+     */
+    /**
+     * @param {CreateTextLayerBuilderParameters}
      * @returns {TextLayerBuilder}
      */
-    createTextLayerBuilder(textLayerDiv: HTMLDivElement, pageIndex: number, viewport: PageViewport, enhanceTextSelection: boolean | undefined, eventBus: EventBus, highlighter: TextHighlighter): TextLayerBuilder;
+    createTextLayerBuilder({ textLayerDiv, pageIndex, viewport, enhanceTextSelection, eventBus, highlighter, accessibilityManager, }: {
+        textLayerDiv: HTMLDivElement;
+        pageIndex: number;
+        viewport: PageViewport;
+        enhanceTextSelection?: boolean | undefined;
+        eventBus: EventBus;
+        highlighter: TextHighlighter;
+        accessibilityManager?: import("./text_accessibility.js").TextAccessibilityManager | undefined;
+    }): TextLayerBuilder;
     /**
-     * @param {number} pageIndex
-     * @param {EventBus} eventBus
+     * @typedef {Object} CreateTextHighlighterParameters
+     * @property {number} pageIndex
+     * @property {EventBus} eventBus
+     */
+    /**
+     * @param {CreateTextHighlighterParameters}
      * @returns {TextHighlighter}
      */
-    createTextHighlighter(pageIndex: number, eventBus: EventBus): TextHighlighter;
+    createTextHighlighter({ pageIndex, eventBus }: {
+        pageIndex: number;
+        eventBus: EventBus;
+    }): TextHighlighter;
     /**
-     * @param {HTMLDivElement} pageDiv
-     * @param {PDFPageProxy} pdfPage
-     * @param {AnnotationStorage} [annotationStorage] - Storage for annotation
+     * @typedef {Object} CreateAnnotationLayerBuilderParameters
+     * @property {HTMLDivElement} pageDiv
+     * @property {PDFPageProxy} pdfPage
+     * @property {AnnotationStorage} [annotationStorage] - Storage for annotation
      *   data in forms.
-     * @param {string} [imageResourcesPath] - Path for image resources, mainly
+     * @property {string} [imageResourcesPath] - Path for image resources, mainly
      *   for annotation icons. Include trailing slash.
-     * @param {boolean} renderForms
-     * @param {IL10n} l10n
-     * @param {boolean} [enableScripting]
-     * @param {Promise<boolean>} [hasJSActionsPromise]
-     * @param {Object} [mouseState]
-     * @param {Promise<Object<string, Array<Object>> | null>}
+     * @property {boolean} renderForms
+     * @property {IL10n} l10n
+     * @property {boolean} [enableScripting]
+     * @property {Promise<boolean>} [hasJSActionsPromise]
+     * @property {Object} [mouseState]
+     * @property {Promise<Object<string, Array<Object>> | null>}
      *   [fieldObjectsPromise]
-     * @param {Map<string, HTMLCanvasElement>} [annotationCanvasMap]
+     * @property {Map<string, HTMLCanvasElement>} [annotationCanvasMap] - Map some
+     *   annotation ids with canvases used to render them.
+     * @property {TextAccessibilityManager} [accessibilityManager]
+     */
+    /**
+     * @param {CreateAnnotationLayerBuilderParameters}
      * @returns {AnnotationLayerBuilder}
      */
-    createAnnotationLayerBuilder(pageDiv: HTMLDivElement, pdfPage: PDFPageProxy, annotationStorage?: any, imageResourcesPath?: string | undefined, renderForms?: boolean, l10n?: IL10n, enableScripting?: boolean | undefined, hasJSActionsPromise?: Promise<boolean> | undefined, mouseState?: Object | undefined, fieldObjectsPromise?: Promise<{
-        [x: string]: Object[];
-    } | null> | undefined, annotationCanvasMap?: Map<string, HTMLCanvasElement> | undefined): AnnotationLayerBuilder;
+    createAnnotationLayerBuilder({ pageDiv, pdfPage, annotationStorage, imageResourcesPath, renderForms, l10n, enableScripting, hasJSActionsPromise, mouseState, fieldObjectsPromise, annotationCanvasMap, accessibilityManager, }: {
+        pageDiv: HTMLDivElement;
+        pdfPage: PDFPageProxy;
+        /**
+         * - Storage for annotation
+         * data in forms.
+         */
+        annotationStorage?: any;
+        /**
+         * - Path for image resources, mainly
+         * for annotation icons. Include trailing slash.
+         */
+        imageResourcesPath?: string | undefined;
+        renderForms: boolean;
+        l10n: IL10n;
+        enableScripting?: boolean | undefined;
+        hasJSActionsPromise?: Promise<boolean> | undefined;
+        mouseState?: Object | undefined;
+        fieldObjectsPromise?: Promise<{
+            [x: string]: Object[];
+        } | null> | undefined;
+        /**
+         * - Map some
+         * annotation ids with canvases used to render them.
+         */
+        annotationCanvasMap?: Map<string, HTMLCanvasElement> | undefined;
+        accessibilityManager?: import("./text_accessibility.js").TextAccessibilityManager | undefined;
+    }): AnnotationLayerBuilder;
     /**
-     * @param {HTMLDivElement} pageDiv
-     * @param {PDFPageProxy} pdfPage
-     * @param {AnnotationStorage} [annotationStorage] - Storage for annotation
+     * @typedef {Object} CreateAnnotationEditorLayerBuilderParameters
+     * @property {AnnotationEditorUIManager} [uiManager]
+     * @property {HTMLDivElement} pageDiv
+     * @property {PDFPageProxy} pdfPage
+     * @property {IL10n} l10n
+     * @property {AnnotationStorage} [annotationStorage] - Storage for annotation
+     * @property {TextAccessibilityManager} [accessibilityManager]
      *   data in forms.
+     */
+    /**
+     * @param {CreateAnnotationEditorLayerBuilderParameters}
+     * @returns {AnnotationEditorLayerBuilder}
+     */
+    createAnnotationEditorLayerBuilder({ uiManager, pageDiv, pdfPage, accessibilityManager, l10n, annotationStorage, }: {
+        uiManager?: any;
+        pageDiv: HTMLDivElement;
+        pdfPage: PDFPageProxy;
+        l10n: IL10n;
+        /**
+         * - Storage for annotation
+         */
+        annotationStorage?: any;
+        /**
+         * data in forms.
+         */
+        accessibilityManager?: import("./text_accessibility.js").TextAccessibilityManager | undefined;
+    }): AnnotationEditorLayerBuilder;
+    /**
+     * @typedef {Object} CreateXfaLayerBuilderParameters
+     * @property {HTMLDivElement} pageDiv
+     * @property {PDFPageProxy} pdfPage
+     * @property {AnnotationStorage} [annotationStorage] - Storage for annotation
+     *   data in forms.
+     */
+    /**
+     * @param {CreateXfaLayerBuilderParameters}
      * @returns {XfaLayerBuilder}
      */
-    createXfaLayerBuilder(pageDiv: HTMLDivElement, pdfPage: PDFPageProxy, annotationStorage?: any): XfaLayerBuilder;
+    createXfaLayerBuilder({ pageDiv, pdfPage, annotationStorage, }: {
+        pageDiv: HTMLDivElement;
+        pdfPage: PDFPageProxy;
+        /**
+         * - Storage for annotation
+         * data in forms.
+         */
+        annotationStorage?: any;
+    }): XfaLayerBuilder;
     /**
-     * @param {PDFPageProxy} pdfPage
+     * @typedef {Object} CreateStructTreeLayerBuilderParameters
+     * @property {PDFPageProxy} pdfPage
+     */
+    /**
+     * @param {CreateStructTreeLayerBuilderParameters}
      * @returns {StructTreeLayerBuilder}
      */
-    createStructTreeLayerBuilder(pdfPage: PDFPageProxy): StructTreeLayerBuilder;
+    createStructTreeLayerBuilder({ pdfPage }: {
+        pdfPage: PDFPageProxy;
+    }): StructTreeLayerBuilder;
     /**
      * @type {boolean} Whether all pages of the PDF document have identical
      *   widths and heights.
@@ -462,6 +529,17 @@ export class BaseViewer implements IPDFAnnotationLayerFactory, IPDFStructTreeLay
      * @param {number} [steps] - Defaults to zooming once.
      */
     decreaseScale(steps?: number | undefined): void;
+    updateContainerHeightCss(): void;
+    /**
+     * @param {number} mode - AnnotationEditor mode (None, FreeText, Ink, ...)
+     */
+    set annotationEditorMode(arg: number);
+    /**
+     * @type {number}
+     */
+    get annotationEditorMode(): number;
+    set annotationEditorParams(arg: any);
+    refresh(): void;
     #private;
 }
 export namespace PagesCountLimit {
@@ -493,11 +571,13 @@ export namespace PagesCountLimit {
  *   being rendered. The constants from {@link AnnotationMode} should be used;
  *   see also {@link RenderParameters} and {@link GetOperatorListParameters}.
  *   The default value is `AnnotationMode.ENABLE_FORMS`.
+ * @property {number} [annotationEditorMode] - Enables the creation and editing
+ *   of new Annotations. The constants from {@link AnnotationEditorType} should
+ *   be used. The default value is `AnnotationEditorType.DISABLE`.
  * @property {string} [imageResourcesPath] - Path for image resources, mainly
  *   mainly for annotation icons. Include trailing slash.
  * @property {boolean} [enablePrintAutoRotate] - Enables automatic rotation of
  *   landscape pages upon printing. The default is `false`.
- * @property {string} renderer - 'canvas' or 'svg'. The default is 'canvas'.
  * @property {boolean} [useOnlyCssZoom] - Enables CSS only zooming. The default
  *   value is `false`.
  * @property {number} [maxCanvasPixels] - The maximum supported canvas size in
@@ -506,6 +586,9 @@ export namespace PagesCountLimit {
  * @property {IL10n} l10n - Localization service.
  * @property {boolean} [enablePermissions] - Enables PDF document permissions,
  *   when they exist. The default value is `false`.
+ * @property {Object} [pageColors] - Overwrites background and foreground colors
+ *   with user defined ones in order to improve readability in high contrast
+ *   mode.
  */
 export class PDFPageViewBuffer {
     constructor(size: any);
@@ -526,5 +609,6 @@ import { PDFRenderingQueue } from "./pdf_rendering_queue.js";
 import { TextHighlighter } from "./text_highlighter.js";
 import { TextLayerBuilder } from "./text_layer_builder.js";
 import { AnnotationLayerBuilder } from "./annotation_layer_builder.js";
+import { AnnotationEditorLayerBuilder } from "./annotation_editor_layer_builder.js";
 import { XfaLayerBuilder } from "./xfa_layer_builder.js";
 import { StructTreeLayerBuilder } from "./struct_tree_layer_builder.js";

@@ -1,8 +1,16 @@
 const keep_alive = require('./keep_alive.js');
 const { Client, Collection, Events, GatewayIntentBits } = require('discord.js');
 
+// OpenAI
 const { Configuration, OpenAIApi } = require("openai");
+const { OpenAI } = require("langchain/llms/openai");
+const { PromptTemplate } = require("langchain/prompts");
+const { LLMChain } = require("langchain/chains");
+const { GoogleCustomSearch } = require("langchain/tools");
+const { RecursiveCharacterTextSplitter } = require("langchain/text_splitter");
+
 const fetch = require("node-fetch");
+const rake = require('node-rake-v2');
 
 // PDFjs
 const pdfjsLib = require("pdfjs-dist/legacy/build/pdf.js");
@@ -21,6 +29,45 @@ const client = new Client({
     GatewayIntentBits.GuildMembers,
   ]
 });
+
+// LangChain
+const model = new OpenAI({ openAIApiKey: process.env.OPENAI_API_KEY, temperature: 0.9 });
+const splitter = new RecursiveCharacterTextSplitter({ chunkSize: 1000, chunkOverlap: 200 });
+
+const searchTool = new GoogleCustomSearch({
+  apiKey: process.env.GOOGLE_API_KEY,
+  googleCSEId: process.env.GOOGLE_CSE_ID,
+});
+
+// Prompt Templates
+const InfoPromptTemplate = "Return an array of topics related to any these of these key words; {topics}, ignore useless phrases and symbols";
+const ResearchPromptTemplate = 'Use this information {info} to return useful links to documentation and relevant information and explainations';
+
+const InfoPrompt = new PromptTemplate({
+  template: InfoPromptTemplate,
+  inputVariables: ["topics"],
+});
+
+const ResearchPrompt = new PromptTemplate({
+  template: ResearchPromptTemplate,
+  inputVariables: ["info"],
+});
+
+// Open AI
+const configuration = new Configuration({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+const openai = new OpenAIApi(configuration);
+
+// command prefixes
+const aitextprefix = "!";
+const artaiprefix = ":art";
+const imageaiprefix = ":remix";
+const resumeprefix = ":resume";
+const researchprefix = ":research";
+
+// URL for OpenAI
+const url = 'https://api.openai.com/v1/chat/completions'
 
 // Test Command
 client.on('messageCreate', async msg => {
@@ -43,21 +90,6 @@ client.on('messageCreate', msg => {
     msg.channel.send(`You are ${Math.floor(Math.random() * 100) + 1}% cool!`)
   }
 });
-
-// Open AI
-const configuration = new Configuration({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-const openai = new OpenAIApi(configuration);
-
-// command prefixes
-const aitextprefix = "!";
-const artaiprefix = ":art";
-const imageaiprefix = ":remix";
-const resumeprefix = ":resume";
-
-// URL for OpenAI
-const url = 'https://api.openai.com/v1/chat/completions'
 
 // Slash Commands
 client.commands = new Collection();
@@ -273,6 +305,47 @@ client.on('messageCreate', async msg => {
     } else {
       msg.channel.send(`File must be PDF`)
     }
+  } catch (err) {
+    msg.channel.send(`${err}`)
+  }
+});
+
+// Research
+client.on('messageCreate', async msg => {
+  if (!msg.content.startsWith(researchprefix)) return;
+  try {
+    let allKWArrays = []
+    let cleanKW = []
+    const channel = client.channels.cache.get(msg.channelId);
+    channel.messages.fetch({ limit: 10 }).then(messages => {
+      console.log(`Received ${messages.size} messages`);
+      //Iterate through the messages here with the variable "messages".
+      messages.forEach(message => {
+        if (message) {
+          const keywords = rake.generate(message.content);
+          allKWArrays = [...allKWArrays, ...keywords]
+        }
+      })
+      cleanKW = [...new Set([...allKWArrays])];
+
+    }).then(async () => {
+      if (cleanKW) {
+        // Chain for returning useful information from chat message keywords
+        const topicchain = new LLMChain({ llm: model, prompt: InfoPrompt });
+        const inforesponse = await topicchain.call({ topics: cleanKW });
+        console.log(`Topics ${JSON.stringify(inforesponse.text)}`);
+        
+        // Chain for researching using Google Search from identified keywords
+        const infochain = new LLMChain({ llm: model, prompt: ResearchPrompt, tools: [searchTool] });
+        const researchresponse = await infochain.call({ info: inforesponse.text });
+        
+        const sections = await splitter.createDocuments([researchresponse.text]);
+        console.log('Sections', sections)
+        sections.forEach((item,index) => {
+          msg.channel.send(`Researching Info: ${item.pageContent}`)
+        })
+      }
+    })
   } catch (err) {
     msg.channel.send(`${err}`)
   }

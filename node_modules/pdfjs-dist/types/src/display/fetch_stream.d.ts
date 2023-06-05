@@ -23,7 +23,7 @@ declare class PDFFetchStreamReader implements IPDFStreamReader {
     _headersCapability: import("../shared/util.js").PromiseCapability;
     _disableRange: any;
     _rangeChunkSize: any;
-    _abortController: AbortController | undefined;
+    _abortController: AbortController;
     _isStreamingSupported: boolean;
     _isRangeSupported: boolean;
     _headers: Headers;
@@ -34,7 +34,7 @@ declare class PDFFetchStreamReader implements IPDFStreamReader {
     get isRangeSupported(): boolean;
     get isStreamingSupported(): boolean;
     read(): Promise<{
-        value: Uint8Array | undefined;
+        value: undefined;
         done: true;
     } | {
         value: ArrayBufferLike;
@@ -51,12 +51,12 @@ declare class PDFFetchStreamRangeReader implements IPDFStreamRangeReader {
     _withCredentials: any;
     _readCapability: import("../shared/util.js").PromiseCapability;
     _isStreamingSupported: boolean;
-    _abortController: AbortController | undefined;
+    _abortController: AbortController;
     _headers: Headers;
     onProgress: any;
     get isStreamingSupported(): boolean;
     read(): Promise<{
-        value: Uint8Array | undefined;
+        value: undefined;
         done: true;
     } | {
         value: ArrayBufferLike;
