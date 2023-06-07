@@ -1,6 +1,6 @@
 entrypoint = "index.js"
 
-hidden = [".config"]
+hidden = [".config", "config.json"]
 
 [interpreter]
 command = [
