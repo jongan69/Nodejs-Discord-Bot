@@ -1,15 +1,22 @@
+// Keep server alive 
 const keep_alive = require('./keep_alive.js');
+
+// Discord.js 14 SDK
 const { Client, Collection, Events, GatewayIntentBits } = require('discord.js');
 
-// OpenAI
+// OpenAI SDK
 const { Configuration, OpenAIApi } = require("openai");
+
+// LangChain
 const { OpenAI } = require("langchain/llms/openai");
+const { ChatOpenAI } = require("langchain/chat_models/openai");
 const { PromptTemplate } = require("langchain/prompts");
-const { LLMChain } = require("langchain/chains");
+const { LLMChain, ConversationChain } = require("langchain/chains");
+const { BufferWindowMemory } = require("langchain/memory");
 const { GoogleCustomSearch } = require("langchain/tools");
 const { RecursiveCharacterTextSplitter } = require("langchain/text_splitter");
 
-const fetch = require("node-fetch");
+// Useful Modules
 const rake = require('node-rake-v2');
 
 // PDFjs
@@ -30,8 +37,9 @@ const client = new Client({
   ]
 });
 
-// LangChain
+// Langchain model & tools initialization
 const model = new OpenAI({ openAIApiKey: process.env.OPENAI_API_KEY, temperature: 0.9 });
+
 const splitter = new RecursiveCharacterTextSplitter({ chunkSize: 1000, chunkOverlap: 200 });
 
 const searchTool = new GoogleCustomSearch({
@@ -41,7 +49,10 @@ const searchTool = new GoogleCustomSearch({
 
 // Prompt Templates
 const InfoPromptTemplate = "Return an array of topics related to any these of these key words; {topics}, ignore useless phrases and symbols";
+
 const ResearchPromptTemplate = 'Use this information {info} to return useful links to documentation and relevant information and explainations';
+
+const ResumePromptTemplate = 'Review and Critique this resume {resumetext}';
 
 const InfoPrompt = new PromptTemplate({
   template: InfoPromptTemplate,
@@ -53,7 +64,15 @@ const ResearchPrompt = new PromptTemplate({
   inputVariables: ["info"],
 });
 
-// Open AI
+const ResumePrompt = new PromptTemplate({
+  template: ResumePromptTemplate,
+  inputVariables: ["resumetext"],
+});
+
+// Memory Buffer for Chat
+const chatmemory = new BufferWindowMemory({ k: 100 });
+
+// Open AI SDK initialization
 const configuration = new Configuration({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -95,7 +114,6 @@ client.on('messageCreate', msg => {
 client.commands = new Collection();
 const foldersPath = path.join(__dirname, 'commands');
 const commandFolders = fs.readdirSync(foldersPath);
-
 for (const folder of commandFolders) {
   const commandsPath = path.join(foldersPath, folder);
   const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
@@ -113,11 +131,8 @@ for (const folder of commandFolders) {
 // Events
 client.on(Events.InteractionCreate, async interaction => {
   if (!interaction.isChatInputCommand()) return;
-
   const command = client.commands.get(interaction.commandName);
-
   if (!command) return;
-
   try {
     await command.execute(interaction);
   } catch (error) {
@@ -135,9 +150,7 @@ client.on('messageCreate', msg => {
   let welcomeChannel = msg.channel.toString() == '<#736380654396244058>';
   let isNotNew = msg.member.roles.cache.some(r => ["Developer", "Admin", "Member"].includes(r.name));
   let isNotBot = msg.author.id != client.user.id;
-
   if (isNotBot && welcomeChannel && !isNotNew) {
-    console.log(`A message was sent in Welcome: ${msg.channel}`)
     msg.channel.send(`Hey @${msg.author.username}, Welcome to the Server! My name is ${client.user}. 
     To use Open AI in here, start your message with "!" Followed by your prompt. 
     For Example:`);
@@ -145,15 +158,13 @@ client.on('messageCreate', msg => {
   }
 });
 
-// AI Image
+// AI Image using OpenAI SDK
 client.on('messageCreate', async msg => {
   if (msg.author.bot) return;
   if (!msg.content.startsWith(artaiprefix)) return;
   const commandBody = msg.content.slice(artaiprefix.length);
   const args = commandBody.split(' ');
-
   try {
-
     const response = await openai.createImage({
       prompt: `${args}`,
       n: 1,
@@ -173,7 +184,7 @@ client.on('messageCreate', async msg => {
   }
 });
 
-// AI Image Variation
+// AI Image Variation using OpenAI SDK
 client.on('messageCreate', async msg => {
   if (msg.author.bot) return;
   if (!msg.content.startsWith(imageaiprefix)) return;
@@ -181,7 +192,6 @@ client.on('messageCreate', async msg => {
   const args = commandBody.split(' ');
   let recievedImages = msg.attachments
   let attachment = recievedImages.first();
-
   if (attachment.length > 0) {
     try {
       const response = await openai.createImageVariation({
@@ -205,37 +215,27 @@ client.on('messageCreate', async msg => {
   }
 });
 
-// AI Text
+// AI Text using Langchain ConversationChain
 client.on('messageCreate', async msg => {
   if (!msg.content.startsWith(aitextprefix)) return;
   const commandBody = msg.content.slice(aitextprefix.length);
   const args = commandBody.split(' ');
   try {
-    const response = await openai.createCompletion({
-      model: "text-davinci-003",
-      prompt: `${args}`,
-      max_tokens: 2048,
-      temperature: 0.8,
-    })
-
-    let answers = response.data.choices
-    if (answers) {
-      answers.forEach((item) => {
-        msg.channel.send(`${item.text}`)
-      })
-    } else {
-      console.warn(response)
+    const chatchain = new ConversationChain({
+      llm: model,
+      chatmemory
+    }); 
+    const response = await chatchain.call({ input: args });
+    if(response){
+      console.log(response.response);
+      msg.channel.send(`${response.response}`)
     }
   } catch (err) {
     msg.channel.send(`${err}`)
   }
 });
 
-function attachIsPDF(msgAttach) {
-  return msgAttach.indexOf("pdf", msgAttach.length - "pdf".length /*or 3*/) !== -1;
-}
-
-// Resume Review Command
+// Resume Review Command using PDFjs-Dist + Langchain LLMChain
 client.on('messageCreate', async msg => {
   if (msg.author.bot) return;
   if (!msg.content.startsWith(resumeprefix)) return;
@@ -245,19 +245,17 @@ client.on('messageCreate', async msg => {
   let resume = file.attachment
   let resumetext;
   try {
-    if (attachIsPDF(resume)) {
+    // First be able to check if PDF
+    if (resume.indexOf("pdf", resume.length - "pdf".length /*or 3*/) !== -1) {
       // Load the PDF document
       var loadingTask = pdfjsLib.getDocument(resume);
-
       loadingTask.promise.then(function(pdf) {
         console.log('PDF loaded', pdf.numPages);
         var maxPages = pdf.numPages;
         var countPromises = []; // collecting all page promises
-
         for (var j = 1; j <= maxPages; j++) {
           var page = pdf.getPage(j);
           var txt = "";
-
           countPromises.push(page.then(function(page) { // add page promise
             var textContent = page.getTextContent();
             return textContent.then(function(text) { // return content promise
@@ -265,39 +263,17 @@ client.on('messageCreate', async msg => {
             });
           }));
         }
-
         // Wait for all pages and join text
         return Promise.all(countPromises).then(async function(texts) {
           console.log(texts)
-          resumetext = texts
-
-          const response = await fetch(url, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-            },
-            body: JSON.stringify({
-              model: "gpt-3.5-turbo",
-              messages: [
-                { role: "user", content: `Review and Critique this resume: ${resumetext}` }
-              ],
-              temperature: 0.7,
-              top_p: 1,
-              frequency_penalty: 0,
-              presence_penalty: 0,
-              max_tokens: 200,
-              stream: false,
-              n: 1,
-            }),
-          });
-
-          const json = await response.json();
-          let answers = json.choices;
-
-          if (answers) {
-            answers.forEach((item) => {
-              msg.channel.send(`RESUME REVIEW: ${item.message.content}`)
+          fullresumetext = texts
+          // Use LLMChain to review resume text
+          const resumechain = new LLMChain({ llm: model, prompt: ResumePrompt });
+          const resumeresponse = await resumechain.call({ resumetext: fullresumetext });
+          const sections = await splitter.createDocuments([resumeresponse.text]);
+          if (sections) {
+            sections.forEach((item, index) => {
+              msg.channel.send(`RESUME REVIEW PT ${index}: ${item.pageContent}`)
             })
           }
         });
@@ -310,15 +286,14 @@ client.on('messageCreate', async msg => {
   }
 });
 
-// Research
+// Research using LangChain LLMChain
 client.on('messageCreate', async msg => {
   if (!msg.content.startsWith(researchprefix)) return;
   try {
     let allKWArrays = []
     let cleanKW = []
     const channel = client.channels.cache.get(msg.channelId);
-    channel.messages.fetch({ limit: 10 }).then(messages => {
-      console.log(`Received ${messages.size} messages`);
+    channel.messages.fetch({ limit: 25 }).then(messages => {
       //Iterate through the messages here with the variable "messages".
       messages.forEach(message => {
         if (message) {
@@ -327,20 +302,15 @@ client.on('messageCreate', async msg => {
         }
       })
       cleanKW = [...new Set([...allKWArrays])];
-
     }).then(async () => {
       if (cleanKW) {
         // Chain for returning useful information from chat message keywords
         const topicchain = new LLMChain({ llm: model, prompt: InfoPrompt });
         const inforesponse = await topicchain.call({ topics: cleanKW });
-        console.log(`Topics ${JSON.stringify(inforesponse.text)}`);
-        
         // Chain for researching using Google Search from identified keywords
         const infochain = new LLMChain({ llm: model, prompt: ResearchPrompt, tools: [searchTool] });
         const researchresponse = await infochain.call({ info: inforesponse.text });
-        
         const sections = await splitter.createDocuments([researchresponse.text]);
-        console.log('Sections', sections)
         sections.forEach((item,index) => {
           msg.channel.send(`Researching Info: ${item.pageContent}`)
         })
