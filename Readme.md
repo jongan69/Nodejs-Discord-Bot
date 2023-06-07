@@ -7,6 +7,10 @@ This is a Discord Bot written in JavaScript using [Discord.js](https://discord.j
 - Node.js
 - Discord.js
 - OpenAI API
+- LangChain
+- Google Search
+- PDFjs-Dist
+- RAKE
 
 ## Usage
 
