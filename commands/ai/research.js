@@ -15,7 +15,7 @@ const searchTool = new GoogleCustomSearch({
 
 const splitter = new RecursiveCharacterTextSplitter({ chunkSize: 1000, chunkOverlap: 200 });
 
-const ResearchPromptTemplate = "Research {researchInfo} and return useful links, documentation, explanations and examples. Summarize the findings in bullet points."
+const ResearchPromptTemplate = "Research {researchInfo} and return useful links, documentation, explanations and examples. Summarize the findings in bullet points working links as references."
 
 const ResearchPrompt = new PromptTemplate({
   template: ResearchPromptTemplate,
