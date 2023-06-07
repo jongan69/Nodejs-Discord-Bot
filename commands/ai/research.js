@@ -1,20 +1,13 @@
 const { SlashCommandBuilder } = require('discord.js');
 const { OpenAI } = require("langchain/llms/openai");
 const { GoogleCustomSearch } = require("langchain/tools");
-const { BufferMemory } = require("langchain/memory");
-const {
-  ChatPromptTemplate,
-  HumanMessagePromptTemplate,
-  SystemMessagePromptTemplate,
-  MessagesPlaceholder,
-} = require("langchain/prompts");
-const { ConversationChain } = require("langchain/chains");
+const { BufferWindowMemory } = require("langchain/memory");
+const { PromptTemplate } = require("langchain/prompts");
+const { LLMChain } = require("langchain/chains");
 const { RecursiveCharacterTextSplitter } = require("langchain/text_splitter");
 
 const model = new OpenAI({ openAIApiKey: process.env.OPENAI_API_KEY, temperature: 0.9 });
-
-// const serpAPI = new SerpAPI(process.env.SERPAPI_API_KEY);
-
+const researchmemory = new BufferWindowMemory({ k: 100 });
 const searchTool = new GoogleCustomSearch({
   apiKey: process.env.GOOGLE_API_KEY,
   googleCSEId: process.env.GOOGLE_CSE_ID,
@@ -22,14 +15,12 @@ const searchTool = new GoogleCustomSearch({
 
 const splitter = new RecursiveCharacterTextSplitter({ chunkSize: 1000, chunkOverlap: 200 });
 
-const chatPrompt = ChatPromptTemplate.fromPromptMessages([
-  SystemMessagePromptTemplate.fromTemplate(
-    "Research the following topics and return useful links, documentation, explanations and code examples. Make sure the links are valid."
-  ),
-  new MessagesPlaceholder("history"),
-  HumanMessagePromptTemplate.fromTemplate("{info}"),
-]);
+const ResearchPromptTemplate = "Research {researchInfo} and return useful links, documentation, explanations and examples. Summarize the findings in bullet points."
 
+const ResearchPrompt = new PromptTemplate({
+  template: ResearchPromptTemplate,
+  inputVariables: ["researchInfo"],
+});
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -44,18 +35,18 @@ module.exports = {
     await interaction.deferReply();
     const prompt = interaction.options.getString('prompt');
     
-    const researchchain = new ConversationChain({
+    const researchchain = new LLMChain({
       llm: model,
-      prompt: chatPrompt,
-      memory: new BufferMemory({ memoryKey: "history" }),
+      prompt: ResearchPrompt,
+      memory: researchmemory,
       tools: [searchTool]
     });
     
-    const researchresponse = await researchchain.call({ info: prompt });
-    const sections = await splitter.createDocuments([researchresponse.response]);
-    
+    const researchresponse = await researchchain.call({ researchInfo: prompt });
+    console.log('Research', researchresponse)
+
+    const sections = await splitter.createDocuments([researchresponse.text]);
     sections.forEach((item) => {
-      console.log('Research', item)
       interaction.editReply(`Research Found for ${item.pageContent}`);
     })
   },

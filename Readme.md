@@ -25,6 +25,8 @@ This bot also has a few slash commands:
 
 /turbo - use GPT-3.5-Turbo for responses
 
+/research - Prompt Langchain LLM Research using Google Search
+
 ## Fun
 /ping - Pong!
 
