@@ -29,8 +29,7 @@ module.exports = {
           }),
     }).then((data) => data.json())
     if(response){
-      console.log('drink', response.choices[0].message)
-        return interaction.followUp(`Drink Recipe: ${response.choices[0].message.content}`);
+      return interaction.followUp(`${response.choices[0].message.content}`);
     }
   },
 };

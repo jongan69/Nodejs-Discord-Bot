@@ -19,11 +19,6 @@ const Lookupprompt = new PromptTemplate({
   inputVariables: ["input"],
 });
 
-const customSearch = new GoogleCustomSearch({
-    apiKey: process.env.GOOGLE_API_KEY,
-    googleCSEId: process.env.GOOGLE_CSE_ID,
-  });
-
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('lookup')
@@ -36,7 +31,7 @@ module.exports = {
   async execute(interaction) {
     await interaction.deferReply();
     const lookupprompt = interaction.options.getString('prompt');
-    const searchresult = await customSearch.call({ input: lookupprompt });
+    const searchresult = await searchTool.call({ input: lookupprompt });
 
     console.log('search', searchresult)
     const chunkSize = 1500;
@@ -47,7 +42,8 @@ module.exports = {
     
     const lookupchain = new LLMChain({
       llm: model,
-      prompt: Lookupprompt
+      prompt: Lookupprompt,
+      tools: [searchTool],
     });
     
     const lookupresponse = await lookupchain.call({ input: searchresult });

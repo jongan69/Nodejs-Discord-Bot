@@ -7,7 +7,9 @@ const { LLMChain } = require("langchain/chains");
 const { RecursiveCharacterTextSplitter } = require("langchain/text_splitter");
 
 const model = new OpenAI({ openAIApiKey: process.env.OPENAI_API_KEY, temperature: 0.9 });
+
 const researchmemory = new BufferWindowMemory({ k: 100 });
+
 const searchTool = new GoogleCustomSearch({
   apiKey: process.env.GOOGLE_API_KEY,
   googleCSEId: process.env.GOOGLE_CSE_ID,
@@ -34,15 +36,17 @@ module.exports = {
   async execute(interaction) {
     await interaction.deferReply();
     const prompt = interaction.options.getString('prompt');
+
+    const searchresult = await searchTool.call({ input: prompt });
     
     const researchchain = new LLMChain({
       llm: model,
       prompt: ResearchPrompt,
       memory: researchmemory,
-      tools: [searchTool]
+      tools: [searchTool],
     });
     
-    const researchresponse = await researchchain.call({ researchInfo: prompt });
+    const researchresponse = await researchchain.call({ researchInfo: searchresult });
 
     const sections = await splitter.createDocuments([researchresponse.text]);
     sections.forEach((item) => {
