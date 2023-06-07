@@ -13,10 +13,10 @@
     "langchain": "^0.0.91",
     "mime-db": "^1.52.0",
     "mime-types": "^2.1.35",
+    "node": "^20.2.0",
     "node-fetch": "^2.6.11",
-    "node-rake": "^1.0.1",
     "node-rake-v2": "^0.0.3",
-    "npm": "^9.6.7",
+    "npm": "9.7.1",
     "openai": "^3.1.0",
     "pdfjs-dist": "^2.13.216",
     "seedrandom": "^3.0.5",
@@ -29,14 +29,12 @@
     "ws": "^8.8.0"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+     "start": "node index.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "engines": {
-    "node": ">=18.0.0"
-  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jongan69/node-discord-openai-bot.git"

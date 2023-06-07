@@ -25,7 +25,7 @@ module.exports = {
     const postTweet = await userClient.v1.tweet(tweet);
     if (postTweet) {
       console.log('Tweet', postTweet.full_text)
-      return await interaction.editReply(`Tweet Posted: ${JSON.stringify(postTweet.full_text)} at https://twitter.com/${postTweet.user.screen_name}`);
+      return await interaction.followUp(`Tweet Posted: ${JSON.stringify(postTweet.full_text)} at https://twitter.com/${postTweet.user.screen_name}`);
     }
   },
 };

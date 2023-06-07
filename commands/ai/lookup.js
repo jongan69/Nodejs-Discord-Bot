@@ -12,14 +12,17 @@ const searchTool = new GoogleCustomSearch({
   googleCSEId: process.env.GOOGLE_CSE_ID,
 });
 
-const splitter = new RecursiveCharacterTextSplitter({ chunkSize: 1000, chunkOverlap: 200 });
+const splitter = new RecursiveCharacterTextSplitter({ chunkSize: 1500, chunkOverlap: 0 });
 
-const LookupPromptTemplate = "Lookup {lookupInfo}"
-
-const LookupPrompt = new PromptTemplate({
-  template: LookupPromptTemplate,
-  inputVariables: ["lookupInfo"],
+const Lookupprompt = new PromptTemplate({
+  template: "Format and Summarize {input} and include references and links. Make sure all sentences are complete",
+  inputVariables: ["input"],
 });
+
+const customSearch = new GoogleCustomSearch({
+    apiKey: process.env.GOOGLE_API_KEY,
+    googleCSEId: process.env.GOOGLE_CSE_ID,
+  });
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -32,20 +35,27 @@ module.exports = {
           .setRequired(true)),
   async execute(interaction) {
     await interaction.deferReply();
-    const prompt = interaction.options.getString('prompt');
+    const lookupprompt = interaction.options.getString('prompt');
+    const searchresult = await customSearch.call({ input: lookupprompt });
+
+    console.log('search', searchresult)
+    const chunkSize = 1500;
+    for (let i = 0; i < searchresult.length; i += chunkSize) {
+      const chunk = searchresult.slice(i, i + chunkSize);
+      interaction.followUp(`Google Search Results: ${chunk}, AI is formatting and Summarizing...`);
+    }
     
     const lookupchain = new LLMChain({
       llm: model,
-      prompt: LookupPrompt,
-      tools: [searchTool]
+      prompt: Lookupprompt
     });
     
-    const lookupresponse = await lookupchain.call({ lookupInfo: prompt });
+    const lookupresponse = await lookupchain.call({ input: searchresult });
     console.log('lookup', lookupresponse)
 
     const sections = await splitter.createDocuments([lookupresponse.text]);
     sections.forEach((item) => {
-      interaction.editReply(`${item.pageContent}`);
+      interaction.followUp(`${item.pageContent}`);
     })
   },
 };

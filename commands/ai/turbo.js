@@ -37,10 +37,10 @@ module.exports = {
     }).then((data) => data.json())
       if(response){
         console.log('prompt', response.choices[0].message)
-        return interaction.editReply(`GPT-Turbo: ${response.choices[0].message.content}`);
+        return interaction.followUp(`GPT-Turbo: ${response.choices[0].message.content}`);
       }
     } else {
-       return interaction.editReply(`Prompt can not be empty`);
+       return interaction.followUp(`Prompt can not be empty`);
     }
   },
 };

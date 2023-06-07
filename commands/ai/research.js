@@ -43,11 +43,10 @@ module.exports = {
     });
     
     const researchresponse = await researchchain.call({ researchInfo: prompt });
-    console.log('Research', researchresponse)
 
     const sections = await splitter.createDocuments([researchresponse.text]);
     sections.forEach((item) => {
-      interaction.editReply(`Research Found for ${item.pageContent}`);
+      interaction.followUp(`Research Found for ${item.pageContent}`);
     })
   },
 };
