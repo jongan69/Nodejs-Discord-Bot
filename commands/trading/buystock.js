@@ -1,0 +1,43 @@
+const { SlashCommandBuilder } = require('discord.js');
+const fetch = require("node-fetch");
+
+module.exports = {
+  data: new SlashCommandBuilder()
+    .setName('buystock')
+    .setDescription('Buys 1 share of given stock')
+    .addStringOption(
+      option => 
+        option.setName('ticker')
+        .setDescription('Stock Ticker to Buy')
+        .setRequired(true)),
+  async execute(interaction) {
+    await interaction.deferReply();
+    const ticker = interaction.options.getString('ticker');
+
+    const url = 'https://paper-api.alpaca.markets/v2/orders';
+
+    const options = {
+      method: 'POST',
+      headers: {
+        accept: 'application/json',
+        'content-type': 'application/json',
+        'APCA-API-KEY-ID': process.env.ALPACA_PAPER_KEY,
+        'APCA-API-SECRET-KEY': process.env.ALPACA_SECRET_KEY
+      },
+      body: JSON.stringify({
+        side: 'buy',
+        type: 'market',
+        time_in_force: 'gtc',
+        extended_hours: false,
+        symbol: ticker,
+        qty: '1'
+      })
+    };
+    
+    let response = await fetch(url, options)
+      .then((data) => data.json())
+    if(response){
+      return interaction.followUp(`${JSON.stringify(response)}`);
+    }
+  },
+};
