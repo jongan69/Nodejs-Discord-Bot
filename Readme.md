@@ -11,6 +11,7 @@ This is a Discord Bot written in JavaScript using [Discord.js](https://discord.j
 - Google Search
 - PDFjs-Dist
 - RAKE
+- ALPACA API
 
 ## Usage
 
@@ -42,6 +43,20 @@ This bot also has a few slash commands:
 /server - returns server information
 
 /avatar - returns avatar image
+
+
+## Trading
+/buystock
+
+/buybitcoin 
+
+/sellstock
+
+/sellbitcoin
+
+/balance
+
+/list
 
 ## Moderation
 /kick - Simulates a kick
