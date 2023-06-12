@@ -36,18 +36,14 @@ module.exports = {
   async execute(interaction) {
     await interaction.deferReply();
     const prompt = interaction.options.getString('prompt');
-
     const searchresult = await searchTool.call({ input: prompt });
-    
     const researchchain = new LLMChain({
       llm: model,
       prompt: ResearchPrompt,
       memory: researchmemory,
       tools: [searchTool],
     });
-    
     const researchresponse = await researchchain.call({ researchInfo: searchresult });
-
     const sections = await splitter.createDocuments([researchresponse.text]);
     sections.forEach((item) => {
       interaction.followUp(`Research Found for ${item.pageContent}`);

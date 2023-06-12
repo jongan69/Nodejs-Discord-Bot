@@ -9,7 +9,6 @@ const { Configuration, OpenAIApi } = require("openai");
 
 // LangChain
 const { OpenAI } = require("langchain/llms/openai");
-const { ChatOpenAI } = require("langchain/chat_models/openai");
 const { PromptTemplate } = require("langchain/prompts");
 const { LLMChain, ConversationChain } = require("langchain/chains");
 const { BufferWindowMemory } = require("langchain/memory");
@@ -69,7 +68,7 @@ const ResumePrompt = new PromptTemplate({
   inputVariables: ["resumetext"],
 });
 
-// Memory Buffer for Chat
+// Memory Buffer for AI Text Chat
 const chatmemory = new BufferWindowMemory({ k: 100 });
 
 // Open AI SDK initialization
@@ -84,9 +83,6 @@ const artaiprefix = ":art";
 const imageaiprefix = ":remix";
 const resumeprefix = ":resume";
 const researchprefix = ":research";
-
-// URL for OpenAI
-const url = 'https://api.openai.com/v1/chat/completions'
 
 // Test Command
 client.on('messageCreate', async msg => {
@@ -148,7 +144,7 @@ client.on(Events.InteractionCreate, async interaction => {
 // Welcome Message
 client.on('messageCreate', msg => {
   let welcomeChannel = msg.channel.toString() == '<#736380654396244058>';
-  let isNotNew = msg.member.roles.cache.some(r => ["Developer", "Admin", "Member"].includes(r.name));
+  let isNotNew = msg.member?.roles?.cache?.some(r => ["Developer", "Admin", "Member" ].includes(r.name));
   let isNotBot = msg.author.id != client.user.id;
   if (isNotBot && welcomeChannel && !isNotNew) {
     msg.channel.send(`Hey @${msg.author.username}, Welcome to the Server! My name is ${client.user}. 
@@ -165,6 +161,7 @@ client.on('messageCreate', async msg => {
   const commandBody = msg.content.slice(artaiprefix.length);
   const args = commandBody.split(' ');
   try {
+    
     const response = await openai.createImage({
       prompt: `${args}`,
       n: 1,
@@ -224,9 +221,9 @@ client.on('messageCreate', async msg => {
     const chatchain = new ConversationChain({
       llm: model,
       chatmemory
-    }); 
+    });
     const response = await chatchain.call({ input: args });
-    if(response){
+    if (response) {
       console.log(response.response);
       msg.channel.send(`${response.response}`)
     }
@@ -311,7 +308,7 @@ client.on('messageCreate', async msg => {
         const infochain = new LLMChain({ llm: model, prompt: ResearchPrompt, tools: [searchTool] });
         const researchresponse = await infochain.call({ info: inforesponse.text });
         const sections = await splitter.createDocuments([researchresponse.text]);
-        sections.forEach((item,index) => {
+        sections.forEach((item, index) => {
           msg.channel.send(`Researching Info: ${item.pageContent}`)
         })
       }

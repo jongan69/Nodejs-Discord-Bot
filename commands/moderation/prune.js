@@ -8,7 +8,6 @@ module.exports = {
 	async execute(interaction) {
     await interaction.deferReply({ ephemeral: true })
 		const amount = interaction.options.getInteger('amount');
-
 		if (amount < 1 || amount > 99) {
 			return interaction.editReply({ content: 'You need to input a number between 1 and 99.', ephemeral: true });
 		}
