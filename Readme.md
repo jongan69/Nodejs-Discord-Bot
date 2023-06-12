@@ -17,25 +17,34 @@ This is a Discord Bot written in JavaScript using [Discord.js](https://discord.j
 
 The bot has several prefix commands for different AI features.
 
-- `!` - AI Text
+- `!` - AI Text with Memory Buffer (100 messages)
 - `:art` - AI Image
 - `:remix` - AI Image Variation
 - `:resume` - AI PDF Resume Review
 - `:research` - AI Google Search Message Research
-- 
+
 This bot also has a few slash commands:
 
-## AI
+
+## AI // Langchain
 /drink - An AI drink recipe
 
 /turbo - use GPT-3.5-Turbo for responses
 
 /research - Prompt Langchain LLM Research using Google Search
 
+/interview - `In Dev:` Using AI with Resumes to simulate an Interview
+
+/lookup - Research Given Information in Google and use AI to Summarize findings
+
+/browse - Summarize information from a URL 
+
+
 ## Fun
 /ping - Pong!
 
 /tweet - Tweet using discord
+
 
 ## Utility
 /entropy - returns entropy from Real Random LLC API
@@ -44,19 +53,10 @@ This bot also has a few slash commands:
 
 /avatar - returns avatar image
 
+/allethnfts - returns all Ethereum NFTs using Alchemy SDK
 
-## Trading
-/buystock
+/bitcoinaddress - returns Bitcoin Address Balance using https://blockchain.info
 
-/buybitcoin 
-
-/sellstock
-
-/sellbitcoin
-
-/balance
-
-/list
 
 ## Moderation
 /kick - Simulates a kick
@@ -66,16 +66,40 @@ This bot also has a few slash commands:
 /user - returns user information
 
 
+## Trading
+/buystock - Buy a single share of stock using Alpaca API
+
+/buybitcoin - Buy a single Bitcoin using Alpaca API
+
+/sellstock - Sell a single share of stock using Alpaca API
+
+/sellbitcoin - Sell a single Bitcoin using Alpaca API
+
+/balance - Returns Alpaca API Account Balances
+
+/list - Returns all Open Positions and P/L
+
+
 ## Installation
 
 1. Clone the repository
 2. Run `npm install` to install dependencies
-3. Create a `.env` file and add your Discord Bot secret and OpenAI API key
-4. Run the bot with `node index.js`
+3. Create a `.env` file and add your Discord Bot secret and Other API Keys:
+- ALCHEMY_APP_API_KEY
+- ALPACA_PAPER_KEY
+- GOOGLE_API_KEY
+- GOOGLE_CSE_ID
+- OPENAI_API_KEY
+- TWITTER_ACCESS_SECRET
+- TWITTER_ACCESS_TOKEN
+- TWITTER_API_KEY
+- TWITTER_API_SECRET
+4. Deploy Slash Commands with `node deploy-commands.js`
+5. Run the bot with `node index.js`
 
 ## Configuration
 
-The bot can be configured by editing the prefix variable in index.js, use `node deploy-commands.js` script to enable slash commands
+The bot can be configured by editing the prefix variable in index.js, use `node deploy-commands.js` script to enable slash command auto completion
 
 ## Contributing
 
