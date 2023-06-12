@@ -105,7 +105,7 @@ The bot can be configured by editing the prefix variable in index.js, in order t
 {
   "token": "DISCORD_BOT_SECRET",
   "clientId": "BOT_CLIENT_ID",
-	"guildId": "DISCORD_SERVER_ID"
+  "guildId": "DISCORD_SERVER_ID"
 }
 ```
 
