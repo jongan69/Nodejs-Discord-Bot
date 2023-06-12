@@ -12,6 +12,7 @@ This is a Discord Bot written in JavaScript using [Discord.js](https://discord.j
 - PDFjs-Dist
 - RAKE
 - ALPACA API
+- ALCHEMY SDK
 
 ## Usage
 
