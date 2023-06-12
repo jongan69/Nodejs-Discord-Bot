@@ -99,7 +99,15 @@ This bot also has a few slash commands:
 
 ## Configuration
 
-The bot can be configured by editing the prefix variable in index.js, use `node deploy-commands.js` script to enable slash command auto completion
+The bot can be configured by editing the prefix variable in index.js, in order to use `node deploy-commands.js` script to enable slash command auto completion you must have a `config.json` in project root with:
+
+```
+{
+  "token": "DISCORD_BOT_SECRET",
+  "clientId": "BOT_CLIENT_ID",
+	"guildId": "DISCORD_SERVER_ID"
+}
+```
 
 ## Contributing
 
