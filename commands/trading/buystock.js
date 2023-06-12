@@ -37,7 +37,7 @@ module.exports = {
     let response = await fetch(url, options)
       .then((data) => data.json())
     if(response){
-      return interaction.followUp(`${JSON.stringify(response)}`);
+      return interaction.followUp(`Buying ${ticker} was submitted at ${response.submitted_at}, QTY: ${response.filled_qty}`);
     }
   },
 };

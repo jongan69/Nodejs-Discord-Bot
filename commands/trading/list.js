@@ -22,7 +22,9 @@ module.exports = {
     let response = await fetch(url, options)
       .then((data) => data.json())
     if(response){
-      return interaction.followUp(`${JSON.stringify(response)}`);
+      response.forEach((item) => {
+        return interaction.followUp(`Stock: ${item.symbol}, QTY Available: ${item.qty_available}, Profit/Loss($): ${item.unrealized_pl}`);
+      })
     }
   },
 };

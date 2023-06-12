@@ -30,7 +30,7 @@ module.exports = {
     let response = await fetch(url, options)
       .then((data) => data.json())
     if(response){
-      return interaction.followUp(`${JSON.stringify(response)}`);
+      return interaction.followUp(`Buying 1 Bitcoin was submitted at ${response.submitted_at}`);
     }
   },
 };

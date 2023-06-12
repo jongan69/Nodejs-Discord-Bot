@@ -4,7 +4,10 @@ module.exports = {
 	data: new SlashCommandBuilder()
 		.setName('prune')
 		.setDescription('Prune up to 99 messages.')
-		.addIntegerOption(option => option.setName('amount').setDescription('Number of messages to prune')),
+		.addIntegerOption(
+      option => option
+        .setName('amount').setDescription('Number of messages to prune'))
+    .setRequired(true)),
 	async execute(interaction) {
     await interaction.deferReply({ ephemeral: true })
 		const amount = interaction.options.getInteger('amount');
