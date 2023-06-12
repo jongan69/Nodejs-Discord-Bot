@@ -4,6 +4,7 @@
   "description": "This is a Discord Bot written in JavaScript using [Discord.js](https://discord.js.org/) and [OpenAI](https://openai.com/).",
   "main": "index.js",
   "dependencies": {
+    "alchemy-sdk": "^2.9.0",
     "asynckit": "^0.4.0",
     "axios": "^1.4.0",
     "cheerio": "^1.0.0-rc.12",
