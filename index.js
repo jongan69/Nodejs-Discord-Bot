@@ -10,10 +10,11 @@ const { Configuration, OpenAIApi } = require("openai");
 // LangChain
 const { OpenAI } = require("langchain/llms/openai");
 const { PromptTemplate } = require("langchain/prompts");
-const { LLMChain, ConversationChain } = require("langchain/chains");
+const { LLMChain, ConversationChain, loadSummarizationChain, AnalyzeDocumentChain } = require("langchain/chains");
 const { BufferWindowMemory } = require("langchain/memory");
 const { GoogleCustomSearch } = require("langchain/tools");
-const { RecursiveCharacterTextSplitter } = require("langchain/text_splitter");
+const { WebBrowser } = require("langchain/tools/webbrowser");
+const { RecursiveCharacterTextSplitter, TokenTextSplitter } = require("langchain/text_splitter");
 
 // Useful Modules
 const rake = require('node-rake-v2');
@@ -41,6 +42,11 @@ const model = new OpenAI({ openAIApiKey: process.env.OPENAI_API_KEY, temperature
 
 const splitter = new RecursiveCharacterTextSplitter({ chunkSize: 1000, chunkOverlap: 200 });
 
+const tokensplitter = new TokenTextSplitter({
+  encodingName: "gpt2",
+});
+
+
 const searchTool = new GoogleCustomSearch({
   apiKey: process.env.GOOGLE_API_KEY,
   googleCSEId: process.env.GOOGLE_CSE_ID,
@@ -52,6 +58,8 @@ const InfoPromptTemplate = "Return an array of topics related to any these of th
 const ResearchPromptTemplate = 'Use this information {info} to return useful links to documentation and relevant information and explainations';
 
 const ResumePromptTemplate = 'Review and Critique this resume {resumetext}';
+
+const DocumentPromptTemplate = 'Review and Summarize this document like Im 5 years old, using analogies to explain complex topics: {documenttext}';
 
 const InfoPrompt = new PromptTemplate({
   template: InfoPromptTemplate,
@@ -68,6 +76,11 @@ const ResumePrompt = new PromptTemplate({
   inputVariables: ["resumetext"],
 });
 
+const DocumentPrompt = new PromptTemplate({
+  template: DocumentPromptTemplate,
+  inputVariables: ["documenttext"],
+});
+
 // Memory Buffer for AI Text Chat
 const chatmemory = new BufferWindowMemory({ k: 100 });
 
@@ -82,6 +95,7 @@ const aitextprefix = "!";
 const artaiprefix = ":art";
 const imageaiprefix = ":remix";
 const resumeprefix = ":resume";
+const documentprefix = ":pdfsummary";
 const researchprefix = ":research";
 
 // Test Command
@@ -271,6 +285,79 @@ client.on('messageCreate', async msg => {
           if (sections) {
             sections.forEach((item, index) => {
               msg.channel.send(`RESUME REVIEW PT ${index}: ${item.pageContent}`)
+            })
+          }
+        });
+      });
+    } else {
+      msg.channel.send(`File must be PDF`)
+    }
+  } catch (err) {
+    msg.channel.send(`${err}`)
+  }
+});
+
+// Document Review Command using PDFjs-Dist + Langchain LLMChain
+client.on('messageCreate', async msg => {
+  if (msg.author.bot) return;
+  if (!msg.content.startsWith(documentprefix)) return;
+  msg.channel.send(`Document being reviewed`)
+
+  let documentResume = msg.attachments
+  let file = documentResume.first();
+  let document = file.attachment
+  try {
+    // First be able to check if PDF
+    if (document.indexOf("pdf", document.length - "pdf".length /*or 3*/) !== -1) {
+      // Load the PDF document
+      var loadingTask = pdfjsLib.getDocument(document);
+      loadingTask.promise.then(function(pdf) {
+        console.log('PDF loaded', pdf.numPages);
+        var maxPages = pdf.numPages;
+        var countPromises = []; // collecting all page promises
+        for (var j = 1; j <= maxPages; j++) {
+          var page = pdf.getPage(j);
+          var txt = "";
+          countPromises.push(page.then(function(page) { // add page promise
+            var textContent = page.getTextContent();
+            return textContent.then(function(text) { // return content promise
+              return text.items.map(function(s) { return s.str; }).join(''); // value page text 
+            });
+          }));
+        }
+        // Wait for all pages and join text
+        return Promise.all(countPromises).then(async function(texts) {
+          console.log(texts)
+          fulldocumenttext = texts[0];
+
+          const combineDocsChain = loadSummarizationChain(model);
+          const docprompt = "Review and Summarize this document like Im 5 years old, Idenify all mathamatical formulas in document and how to solve.";
+          const documentchain = new AnalyzeDocumentChain({
+            combineDocumentsChain: combineDocsChain,
+          });
+          const documentresponse = await documentchain.call({input_document: fulldocumenttext, prompt: docprompt});
+          msg.channel.send(`DOCUMENT SUMMARY: ${documentresponse.text}`)
+          
+          const documentchainTwo = new LLMChain({ llm: model, prompt: DocumentPrompt });
+          const documentTworesponse = await documentchainTwo.call({ documenttext: documentresponse.text });
+          msg.channel.send(`DOCUMENT SUMMARY 2: ${documentTworesponse.text}`)
+
+          
+          const searchresult = await searchTool.call({ input: documentresponse.text });
+          const chunkSize = 1500;
+          for (let i = 0; i < searchresult.length; i += chunkSize) {
+            const chunk = searchresult.slice(i, i + chunkSize);
+            msg.channel.send(`Google Search Result: ${chunk}`)
+          }
+          
+          const infochain = new LLMChain({ llm: model, prompt: ResearchPrompt, tools: [searchTool] });
+          const researchresponse = await infochain.call({ info: searchresult });
+          
+          msg.channel.send(`DOCUMENT REVIEWED`);
+          const sections = await splitter.createDocuments([researchresponse.text]);
+          if (sections) {
+            sections.forEach((item, index) => {
+              msg.channel.send(`DOCUMENT REVIEW PT ${index}: ${item.pageContent}`)
             })
           }
         });
