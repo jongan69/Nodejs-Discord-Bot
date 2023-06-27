@@ -331,7 +331,7 @@ client.on('messageCreate', async msg => {
           fulldocumenttext = texts[0];
 
           const combineDocsChain = loadSummarizationChain(model);
-          const docprompt = "Review and Summarize this document like Im 5 years old, Idenify all mathamatical formulas in document and how to solve.";
+          const docprompt = "Review and Summarize this document, Idenify all mathamatical formulas in document with steps to solve.";
           const documentchain = new AnalyzeDocumentChain({
             combineDocumentsChain: combineDocsChain,
           });
@@ -342,7 +342,6 @@ client.on('messageCreate', async msg => {
           const documentTworesponse = await documentchainTwo.call({ documenttext: documentresponse.text });
           msg.channel.send(`DOCUMENT SUMMARY 2: ${documentTworesponse.text}`)
 
-          
           const searchresult = await searchTool.call({ input: documentresponse.text });
           const chunkSize = 1500;
           for (let i = 0; i < searchresult.length; i += chunkSize) {
