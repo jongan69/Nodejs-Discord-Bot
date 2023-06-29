@@ -2,6 +2,8 @@
 
 This is a Discord Bot written in JavaScript using [Discord.js](https://discord.js.org/) and [OpenAI](https://openai.com/).
 
+<img width="672" alt="Screenshot 2023-06-29 at 5 23 49 PM" src="https://github.com/jongan69/Nodejs-Discord-Bot/assets/29899042/523dc661-2698-44b9-870e-9f3e63167a80">
+
 ## Requirements
 
 - Node.js
