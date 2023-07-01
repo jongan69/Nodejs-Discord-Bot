@@ -19,7 +19,7 @@
     "node": "^20.2.0",
     "node-fetch": "^2.6.11",
     "node-rake-v2": "^0.0.3",
-    "npm": "9.7.1",
+    "npm": "9.7.2",
     "openai": "^3.1.0",
     "pdfjs-dist": "^2.13.216",
     "seedrandom": "^3.0.5",
