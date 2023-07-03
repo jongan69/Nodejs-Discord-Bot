@@ -13,7 +13,6 @@ const { PromptTemplate } = require("langchain/prompts");
 const { LLMChain, ConversationChain, loadSummarizationChain, AnalyzeDocumentChain } = require("langchain/chains");
 const { BufferWindowMemory } = require("langchain/memory");
 const { GoogleCustomSearch } = require("langchain/tools");
-const { WebBrowser } = require("langchain/tools/webbrowser");
 const { RecursiveCharacterTextSplitter, TokenTextSplitter } = require("langchain/text_splitter");
 
 // Useful Modules
@@ -158,7 +157,7 @@ client.on(Events.InteractionCreate, async interaction => {
 // Welcome Message
 client.on('messageCreate', msg => {
   let welcomeChannel = msg.channel.toString() == '<#736380654396244058>';
-  let isNotNew = msg.member?.roles?.cache?.some(r => ["Developer", "Admin", "Member" ].includes(r.name));
+  let isNotNew = msg.member?.roles?.cache?.some(r => ["Developer", "Admin", "Member"].includes(r.name));
   let isNotBot = msg.author.id != client.user.id;
   if (isNotBot && welcomeChannel && !isNotNew) {
     msg.channel.send(`Hey @${msg.author.username}, Welcome to the Server! My name is ${client.user}. 
@@ -175,7 +174,7 @@ client.on('messageCreate', async msg => {
   const commandBody = msg.content.slice(artaiprefix.length);
   const args = commandBody.split(' ');
   try {
-    
+
     const response = await openai.createImage({
       prompt: `${args}`,
       n: 1,
@@ -303,9 +302,10 @@ client.on('messageCreate', async msg => {
   if (!msg.content.startsWith(documentprefix)) return;
   msg.channel.send(`Document being reviewed`)
 
-  let documentResume = msg.attachments
-  let file = documentResume.first();
-  let document = file.attachment
+  let documentAttach = msg.attachments
+  let file = documentAttach.first();
+  let document = file.attachment;
+
   try {
     // First be able to check if PDF
     if (document.indexOf("pdf", document.length - "pdf".length /*or 3*/) !== -1) {
@@ -328,16 +328,21 @@ client.on('messageCreate', async msg => {
         // Wait for all pages and join text
         return Promise.all(countPromises).then(async function(texts) {
           console.log(texts)
-          fulldocumenttext = texts[0];
+
+          // Full PDF Texts of large documents overloaps heap so must split into smaller piece
+          const slicedArray = texts.slice(0, 5);
+          // First 5 and last array element, probably better ways that use whole array
+          fulldocumenttext = slicedArray.join(" ") + texts[texts.length];
+
 
           const combineDocsChain = loadSummarizationChain(model);
           const docprompt = "Review and Summarize this document, Idenify all mathamatical formulas in document with steps to solve.";
           const documentchain = new AnalyzeDocumentChain({
             combineDocumentsChain: combineDocsChain,
           });
-          const documentresponse = await documentchain.call({input_document: fulldocumenttext, prompt: docprompt});
+          const documentresponse = await documentchain.call({ input_document: fulldocumenttext, prompt: docprompt });
           msg.channel.send(`DOCUMENT SUMMARY: ${documentresponse.text}`)
-          
+
           const documentchainTwo = new LLMChain({ llm: model, prompt: DocumentPrompt });
           const documentTworesponse = await documentchainTwo.call({ documenttext: documentresponse.text });
           msg.channel.send(`DOCUMENT SUMMARY 2: ${documentTworesponse.text}`)
@@ -348,10 +353,10 @@ client.on('messageCreate', async msg => {
             const chunk = searchresult.slice(i, i + chunkSize);
             msg.channel.send(`Google Search Result: ${chunk}`)
           }
-          
+
           const infochain = new LLMChain({ llm: model, prompt: ResearchPrompt, tools: [searchTool] });
           const researchresponse = await infochain.call({ info: searchresult });
-          
+
           msg.channel.send(`DOCUMENT REVIEWED`);
           const sections = await splitter.createDocuments([researchresponse.text]);
           if (sections) {
@@ -364,6 +369,7 @@ client.on('messageCreate', async msg => {
     } else {
       msg.channel.send(`File must be PDF`)
     }
+
   } catch (err) {
     msg.channel.send(`${err}`)
   }
@@ -387,6 +393,7 @@ client.on('messageCreate', async msg => {
       cleanKW = [...new Set([...allKWArrays])];
     }).then(async () => {
       if (cleanKW) {
+
         // Chain for returning useful information from chat message keywords
         const topicchain = new LLMChain({ llm: model, prompt: InfoPrompt });
         const inforesponse = await topicchain.call({ topics: cleanKW });

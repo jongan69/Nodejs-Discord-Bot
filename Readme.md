@@ -6,12 +6,15 @@ This is a Discord Bot written in JavaScript using [Discord.js](https://discord.j
 
 ## Requirements
 
+Normal Features
 - Node.js
 - Discord.js
 - OpenAI API
 - LangChain
 - Google Search
 - PDFjs-Dist
+
+Extra Features
 - RAKE
 - ALPACA API
 - ALCHEMY SDK
