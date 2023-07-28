@@ -46,6 +46,7 @@ This bot also has a few slash commands:
 
 /browse - Summarize information from a URL 
 
+/scheduler - Generate Calender .ics files using AI prompts
 
 ## Fun
 /ping - Pong!

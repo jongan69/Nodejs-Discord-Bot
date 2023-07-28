@@ -416,4 +416,5 @@ client.once('ready', () => {
   console.log('Ready!');
 });
 
+console.log(`Token!: ${process.env.DISCORD_BOT_SECRET}`);
 client.login(process.env.DISCORD_BOT_SECRET);
